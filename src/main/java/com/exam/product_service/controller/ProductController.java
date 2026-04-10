@@ -5,6 +5,7 @@ import com.exam.product_service.repository.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.WebRequest;
 
 import java.util.List;
 
@@ -32,14 +33,25 @@ public class ProductController {
     }
 
     @PostMapping
-    public Product save(@RequestBody Product product) {
-        log.info("Guardando producto: {}", product.getNombre());
+    public Product save(@RequestBody Product product, WebRequest request) {
+        log.info("Intentando guardar producto: {}", product.getNombre());
+        request.setAttribute("failedObject", product, WebRequest.SCOPE_REQUEST);
+        if (product.getNombre() == null || product.getNombre().isEmpty() || product.getNombre().equals("fail")) {
+            throw new RuntimeException("Error simulado o nombre vacío");
+        }
+        return productRepository.save(product);
+    }
+
+    @PostMapping("/retry")
+    public Product saveRetry(@RequestBody Product product) {
+        log.info("Reintentando guardar producto desde Broker: {}", product.getNombre());
         return productRepository.save(product);
     }
 
     @PutMapping("/{id}")
-    public Product updateById(@PathVariable String id, @RequestBody Product product) {
+    public Product updateById(@PathVariable String id, @RequestBody Product product, WebRequest request) {
         log.info("Actualizando producto con id: {}", id);
+        request.setAttribute("failedObject", product, WebRequest.SCOPE_REQUEST);
         product.setId(id);
         return productRepository.save(product);
     }
