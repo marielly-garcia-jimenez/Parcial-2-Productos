@@ -36,17 +36,29 @@ public class ProductController {
     public Product save(@RequestBody Product product, WebRequest request) {
         log.info("Intentando guardar producto: {}", product.getNombre());
         request.setAttribute("failedObject", product, WebRequest.SCOPE_REQUEST);
-        if (product.getNombre() == null || product.getNombre().isEmpty() || product.getNombre().equals("fail")) {
-            throw new RuntimeException("Error simulado o nombre vacío");
+        
+        // Condición para disparar reintentos normales ("fail") 
+        // o la prueba de 5 intentos ("fail_permanent")
+        if (product.getNombre() == null || product.getNombre().isEmpty() || 
+            product.getNombre().equalsIgnoreCase("fail") || 
+            product.getNombre().equalsIgnoreCase("fail_permanent")) {
+            
+            throw new RuntimeException("Fallo provocado para iniciar ciclo de reintentos");
         }
+        
         return productRepository.save(product);
     }
 
     @PostMapping("/retry")
     public Product saveRetry(@RequestBody Product product) {
         log.info("Reintentando guardar producto desde Broker: {}", product.getNombre());
+        if ("fail_permanent".equalsIgnoreCase(product.getNombre())) {
+            log.warn("Simulando fallo permanente para prueba de 5 intentos");
+            throw new RuntimeException("Fallo simulado permanentemente");
+        }
         return productRepository.save(product);
     }
+    
 
     @PutMapping("/{id}")
     public Product updateById(@PathVariable String id, @RequestBody Product product, WebRequest request) {
