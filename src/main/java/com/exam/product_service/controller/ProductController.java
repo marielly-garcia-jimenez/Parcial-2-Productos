@@ -68,6 +68,19 @@ public class ProductController {
         return productRepository.save(product);
     }
 
+    @PutMapping("/inventario")
+    public void updateInventory(@RequestBody java.util.Map<String, Integer> items) {
+        log.info("Actualizando inventario para {} productos", items.size());
+        for (java.util.Map.Entry<String, Integer> entry : items.entrySet()) {
+            productRepository.findById(entry.getKey()).ifPresent(product -> {
+                int currentStock = product.getStock() != null ? product.getStock() : 0;
+                product.setStock(currentStock - entry.getValue());
+                productRepository.save(product);
+                log.info("Stock actualizado para producto {}: {} -> {}", entry.getKey(), currentStock, product.getStock());
+            });
+        }
+    }
+
     @DeleteMapping("/{id}")
     public void deleteById(@PathVariable String id) {
         log.info("Eliminando producto con id: {}", id);
