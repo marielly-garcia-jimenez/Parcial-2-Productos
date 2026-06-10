@@ -15,9 +15,11 @@ public class ProductController {
 
     private static final Logger log = LoggerFactory.getLogger(ProductController.class);
     private final ProductRepository productRepository;
+    private final com.exam.product_service.feign.OrderClient orderClient;
 
-    public ProductController(ProductRepository productRepository) {
+    public ProductController(ProductRepository productRepository, com.exam.product_service.feign.OrderClient orderClient) {
         this.productRepository = productRepository;
+        this.orderClient = orderClient;
     }
 
     @GetMapping
@@ -82,8 +84,20 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteById(@PathVariable String id) {
-        log.info("Eliminando producto con id: {}", id);
+    public org.springframework.http.ResponseEntity<?> deleteById(@PathVariable String id) {
+        log.info("Intentando eliminar producto con id: {}", id);
+        try {
+            List<java.util.Map<String, Object>> orders = orderClient.getOrdersByProduct(id);
+            if (orders != null && !orders.isEmpty()) {
+                log.warn("No se puede eliminar el producto {}: está asociado a {} órdenes", id, orders.size());
+                return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
+                        .body(java.util.Map.of("message", "No se puede eliminar el producto: está asociado a una o más órdenes"));
+            }
+        } catch (Exception e) {
+            log.warn("Error al verificar órdenes asociadas: {}", e.getMessage());
+        }
+        
         productRepository.deleteById(id);
+        return org.springframework.http.ResponseEntity.ok().build();
     }
 }
